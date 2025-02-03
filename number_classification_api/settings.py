@@ -26,7 +26,9 @@ SECRET_KEY = "django-insecure-0$)lqxo(zn0qtt_v2rx@9d9$6!%-ju7_5gl0g2z#e3l&fz7np3
 DEBUG = True
 
 ALLOWED_HOSTS = ['https://hng12stg2-bcknd-number-classification-api.onrender.com',
-                 '127.0.0.1:8000',
+                 '127.0.0.1',
+                 'http://127.0.0.1:8000/api/classify-number/?number=371',
+                 'localhost',
                  ]
 
 
@@ -43,7 +45,22 @@ INSTALLED_APPS = [
     "rest_framework",
     "api",
 ]
-
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10
