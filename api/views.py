@@ -1,78 +1,68 @@
-from django.shortcuts import render
-
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .serializers import NumberSerializer
-from .models import Number
 import requests
-import math
+from django.http import JsonResponse
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 
-class NumberClassificationView(APIView):
+class NumberClassifierView(APIView):
     def get(self, request):
-        number = request.GET.get('number')
-        if not number or not number.isdigit():
-            return Response({'error': True, 'message': 'Invalid input'}, status=status.HTTP_400_BAD_REQUEST)
+        # Extract the 'number' parameter from the query string
+        number_param = request.GET.get('number')
 
-        number = int(number)
-        is_prime = self.is_prime(number)
-        is_perfect = self.is_perfect(number)
-        properties = self.get_properties(number)
-        digit_sum = self.get_digit_sum(number)
-        fun_fact = self.get_fun_fact(number)
+        # Input validation
+        try:
+            number = int(number_param)
+        except (ValueError, TypeError):
+            return Response(
+                {"number": number_param, "error": True},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        data = {
-            'number': number,
-            'is_prime': is_prime,
-            'is_perfect': is_perfect,
-            'properties': properties,
-            'digit_sum': digit_sum,
-            'fun_fact': fun_fact
+        # Function to check if a number is prime
+        def is_prime(n):
+            if n <= 1:
+                return False
+            for i in range(2, int(n**0.5) + 1):
+                if n % i == 0:
+                    return False
+            return True
+
+        # Function to check if a number is perfect
+        def is_perfect(n):
+            divisors = [i for i in range(1, n) if n % i == 0]
+            return sum(divisors) == n
+
+        # Function to check if a number is an Armstrong number
+        def is_armstrong(n):
+            digits = [int(d) for d in str(n)]
+            return sum(d ** len(digits) for d in digits) == n
+
+        # Calculate properties
+        digit_sum = sum(int(d) for d in str(number))
+        properties = []
+
+        if is_armstrong(number):
+            properties.append("armstrong")
+        if number % 2 != 0:
+            properties.append("odd")
+        else:
+            properties.append("even")
+
+        # Fetch fun fact from Numbers API
+        try:
+            fun_fact_response = requests.get(f"http://numbersapi.com/{number}")
+            fun_fact = fun_fact_response.text
+        except Exception as e:
+            fun_fact = f"Unable to fetch fun fact for {number}"
+
+        # Prepare response
+        response_data = {
+            "number": number,
+            "is_prime": is_prime(number),
+            "is_perfect": is_perfect(number),
+            "properties": properties,
+            "digit_sum": digit_sum,
+            "fun_fact": fun_fact,
         }
 
-        serializer = NumberSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def is_prime(self, n):
-        if n <= 1:
-            return False
-        if n == 2:
-            return True
-        if n % 2 == 0:
-            return False
-        max_divisor = math.floor(math.sqrt(n))
-        for d in range(3, 1 + max_divisor, 2):
-            if n % d == 0:
-                return False
-        return True
-
-    def is_perfect(self, n):
-        sum = 0
-        for i in range(1, n):
-            if n % i == 0:
-                sum += i
-        return sum == n
-
-    def get_properties(self, n):
-        properties = []
-        if n % 2 != 0:
-            properties.append('odd')
-        if n % 2 == 0:
-            properties.append('even')
-        if self.is_armstrong(n):
-            properties.append('armstrong')
-        return properties
-
-    def get_digit_sum(self, n):
-        return sum(int(digit) for digit in str(n))
-
-    def get_fun_fact(self, n):
-        response = requests.get(f'http://numbersapi.com/{n}')
-        return response.text
-
-    def is_armstrong(self, n):
-        return sum(int(digit) ** len(str(n)) for digit in str(n)) == n
+        return Response(response_data, status=status.HTTP_200_OK)
