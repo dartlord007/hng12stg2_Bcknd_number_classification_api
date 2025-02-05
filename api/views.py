@@ -55,7 +55,7 @@ def number_classifier(request):
     except Exception as e:
         fun_fact = f"Unable to fetch fun fact for {number}"
 
-    # Prepare response
+    # Preparing response
     response_data = {
         "number": number,
         "is_prime": is_prime(number),
